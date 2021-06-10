@@ -1,14 +1,15 @@
 {
-  "compilerOptions": {
-    "module": "ESNext",
-    "target": "es6",
-    "sourceMap": true,
-    "esModuleInterop": true,
-    "rootDir": "src",
-    "outDir": "dist",
-    "declaration": true,
-    "declarationMap": true,
-    "moduleResolution": "node"
-  },
-  "exclude": ["node_modules", "dist"]
+	"compilerOptions": {
+		"module": "ESNext",
+		"target": "es6",
+		"sourceMap": true,
+		"esModuleInterop": true,
+		"rootDir": "src",
+		"outDir": "dist",
+		"declaration": true,
+		"declarationMap": true,
+		"moduleResolution": "node",
+		"strict": true
+	},
+	"exclude": ["node_modules", "dist"]
 }

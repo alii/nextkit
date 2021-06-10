@@ -3,7 +3,7 @@ module.exports = {
 		es2021: true,
 		node: true,
 	},
-	extends: ['xo'],
+	extends: ['xo', 'xo-typescript'],
 	parser: '@typescript-eslint/parser',
 	parserOptions: {
 		ecmaVersion: 12,
@@ -11,6 +11,7 @@ module.exports = {
 	},
 	plugins: ['@typescript-eslint'],
 	rules: {
-		'comma-dangle': 'off',
+		'@typescript-eslint/comma-dangle': 'off',
 	},
+	ignorePatterns: ['dist'],
 };
