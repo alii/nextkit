@@ -1,4 +1,4 @@
-# nextkit
+# nextkit - [demo app](https://github.com/alii/nextkit-demo)
 
 nextkit is a toolkit for Next.js apps that lets you generate type-safe, error handled Next.js API routes that conform to a standard response type.
 

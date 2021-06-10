@@ -26,7 +26,7 @@ export function api<T>(
 			res.status(405).json({
 				success: false,
 				data: null,
-				message: `Cannot ${req.method} this endpoint!`,
+				message: `Cannot ${req.method ?? 'n/a'} this endpoint!`,
 			});
 
 			return;
@@ -40,9 +40,7 @@ export function api<T>(
 					'[nextkit] Headers have already been sent but we have not had the opportunity to reply with some data.';
 
 				if (process.env.NODE_ENV === 'development') {
-					throw new Error(
-						`${message} This error was thrown because NODE_ENV was \`development\`.`
-					);
+					throw new Error(`${message} This error was thrown because NODE_ENV was \`development\`.`);
 				} else {
 					console.warn(message);
 				}
@@ -50,7 +48,7 @@ export function api<T>(
 				return;
 			}
 
-			if ('_redirect' in result) {
+			if (typeof result === 'object' && '_redirect' in result) {
 				res.redirect(result._redirect);
 				return;
 			}
