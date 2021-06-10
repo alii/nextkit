@@ -1,0 +1,29 @@
+{
+	"name": "node-template",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"module": "dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"repository": "https://github.com/alii/node-template",
+	"author": "Alistair Smith <alistairsmith01@gmail.com>",
+	"license": "MIT",
+	"exports": {
+		"import": "./dist/index.js",
+		"require": "./dist/index.cjs"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^4.23.0",
+		"@typescript-eslint/parser": "^4.23.0",
+		"eslint": "^7.26.0",
+		"eslint-config-xo": "^0.36.0",
+		"prettier": "^2.3.0",
+		"tsup": "^4.10.1",
+		"typescript": "^4.2.4"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --dts --format esm,cjs",
+		"lint": "eslint ./src/**/*.ts",
+		"fix": "eslint ./src/**/*.ts --fix"
+	}
+}
