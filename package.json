@@ -2,8 +2,12 @@
 	"name": "nextkit",
 	"version": "1.0.0",
 	"types": "./dist/index.d.ts",
+	"main": "./dist/index.js",
 	"type": "module",
-	"repository": "https://github.com/alii/node-template",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/alii/nextkit.git"
+	},
 	"author": "Alistair Smith <alistairsmith01@gmail.com>",
 	"license": "MIT",
 	"exports": {
@@ -27,5 +31,26 @@
 	},
 	"dependencies": {
 		"next": "^10.2.3"
-	}
+	},
+	"bugs": {
+		"url": "https://github.com/alii/nextkit/issues"
+	},
+	"homepage": "https://github.com/alii/nextkit#readme",
+	"directories": {
+		"dist": "dist"
+	},
+	"files": [
+		"dist",
+		"package.json"
+	],
+	"keywords": [
+		"next.js",
+		"api",
+		"serverless",
+		"function",
+		"route",
+		"toolkit",
+		"vercel"
+	],
+	"description": "Next.js API Route toolkit."
 }
