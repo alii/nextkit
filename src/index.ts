@@ -2,9 +2,18 @@ import {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 
-export type APIResponse<T> =
-	| {success: true; data: T}
-	| {success: false; data: null; message: string};
+export type SuccessfulAPIResponse<T> = {
+	success: true;
+	data: T;
+};
+
+export type ErroredAPIResponse = {
+	success: false;
+	data: null;
+	message: string;
+};
+
+export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 
 export type Handler<T> = (
 	req: NextApiRequest,
