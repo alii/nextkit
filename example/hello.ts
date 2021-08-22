@@ -1,5 +1,5 @@
-import {api} from '../src';
-import {HttpException, InferAPIResponseType} from '../dist';
+// Don't import src, use `from 'nextkit';` 😃
+import {api, HttpException, InferAPIResponseType} from '../src';
 
 const handler = api<{time: number}>({
 	// Example of standard use
