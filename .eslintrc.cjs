@@ -12,6 +12,8 @@ module.exports = {
 	plugins: ['@typescript-eslint'],
 	rules: {
 		'@typescript-eslint/comma-dangle': 'off',
+		'operator-linebreak': 'off',
+		'@typescript-eslint/indent': 'off',
 	},
 	ignorePatterns: ['dist'],
 };

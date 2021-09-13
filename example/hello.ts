@@ -1,7 +1,7 @@
 // Don't import src, use `from 'nextkit';` 😃
-import {api, HttpException, InferAPIResponseType} from '../src';
+import {api, HttpException} from '../src';
 
-const handler = api<{time: number}>({
+export default api({
 	// Example of standard use
 	async GET() {
 		return {
@@ -21,6 +21,3 @@ const handler = api<{time: number}>({
 		throw new HttpException(400, 'This endpoint threw a 400!');
 	},
 });
-
-export type HandlerResponse = InferAPIResponseType<typeof handler>;
-export default handler;
