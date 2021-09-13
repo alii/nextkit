@@ -22,7 +22,7 @@ export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 // this limits any value passed as a generic to be strictly _redirect.
 export type REDIRECT = {_redirect: string} & Record<never, never>;
 
-export type Handler<T> = (
+export type NextkitHandler<T> = (
 	req: NextApiRequest,
 	res: NextApiResponse<APIResponse<T>>
 ) => Promise<T | REDIRECT>;
@@ -42,7 +42,7 @@ function getLogger(logger: NextkitLogger) {
 }
 
 export function api<T>(
-	handlers: Partial<Record<Method, Handler<T>>>,
+	handlers: Partial<Record<Method, NextkitHandler<T>>>,
 	logfn: NextkitLogger = process.env.NODE_ENV === 'development'
 ): NextApiHandler<APIResponse<T>> {
 	const logger = getLogger(logfn);
