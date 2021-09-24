@@ -14,7 +14,9 @@ export type ErroredAPIResponse = {
 	message: string;
 };
 
-export type NextkitLogger = boolean | ((...args: unknown[]) => unknown);
+export type NextkitLogger<T> =
+	| boolean
+	| ((req: NextApiRequest, res: NextApiResponse<T>, ...args: unknown[]) => unknown);
 
 export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 
@@ -27,13 +29,13 @@ export type NextkitHandler<T> = (
 	res: NextApiResponse<APIResponse<T>>
 ) => Promise<T | REDIRECT>;
 
-function getLogger(logger: NextkitLogger) {
+function getLogger<T>(logger: NextkitLogger<T>): Exclude<NextkitLogger<T>, boolean> | null {
 	if (typeof logger === 'function') {
 		return logger;
 	}
 
 	if (logger) {
-		return function (...args: unknown[]) {
+		return function (...args) {
 			console.log(`${blue('nextkit')} –`, ...args);
 		};
 	}
@@ -42,13 +44,13 @@ function getLogger(logger: NextkitLogger) {
 }
 
 export function api<T>(
-	handlers: Partial<Record<Method, NextkitHandler<T>>>,
-	logfn: NextkitLogger = process.env.NODE_ENV === 'development'
+	logfn: NextkitLogger<APIResponse<T>> = process.env.NODE_ENV === 'development',
+	handlers: Partial<Record<Method, NextkitHandler<T>>> = {}
 ): NextApiHandler<APIResponse<T>> {
 	const logger = getLogger(logfn);
-	logger?.('Mounting route');
 
 	return async function (req, res) {
+		logger?.(req, res, 'Mounting route');
 		const handler = handlers[req.method as Method];
 
 		if (!handler) {
@@ -71,7 +73,7 @@ export function api<T>(
 				if (process.env.NODE_ENV === 'development') {
 					throw new Error(`${message} This error was thrown because NODE_ENV was \`development\`.`);
 				} else {
-					logger?.(message);
+					logger?.(req, res, message);
 				}
 
 				return;
@@ -101,7 +103,7 @@ export function api<T>(
 			const message = e instanceof HttpException ? e.message : 'Something went wrong';
 
 			if (code === 500) {
-				logger?.(e);
+				logger?.(req, res, e);
 			}
 
 			res.status(code).json({
