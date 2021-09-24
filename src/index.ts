@@ -1,4 +1,4 @@
-import {blue} from 'colorette';
+import {red, bold} from 'colorette';
 import {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
@@ -16,7 +16,7 @@ export type ErroredAPIResponse = {
 
 export type NextkitLogger<T> =
 	| boolean
-	| ((req: NextApiRequest, res: NextApiResponse<T>, ...args: unknown[]) => unknown);
+	| ((req: NextApiRequest, res: NextApiResponse<T>, err: Error) => unknown);
 
 export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 
@@ -31,26 +31,35 @@ export type NextkitHandler<T> = (
 
 function getLogger<T>(logger: NextkitLogger<T>): Exclude<NextkitLogger<T>, boolean> | null {
 	if (typeof logger === 'function') {
+		if (logger.length !== 3) {
+			throw new Error(
+				'Arguments given to Nextkit logger does not equal 3. These should be the request, response and error'
+			);
+		}
+
 		return logger;
 	}
 
 	if (logger) {
-		return function (...args) {
-			console.log(`${blue('nextkit')} –`, ...args);
+		return function (req, res, err) {
+			console.error(`${bold(red('nextkit'))} –`, err);
 		};
 	}
 
 	return null;
 }
 
+export function createAPIWithHandledErrors<T>(handler: NextkitLogger<APIResponse<T>>) {
+	return (handlers: Partial<Record<Method, NextkitHandler<T>>>) => api(handlers, handler);
+}
+
 export function api<T>(
-	logfn: NextkitLogger<APIResponse<T>> = process.env.NODE_ENV === 'development',
-	handlers: Partial<Record<Method, NextkitHandler<T>>> = {}
+	handlers: Partial<Record<Method, NextkitHandler<T>>>,
+	errorHandler: NextkitLogger<APIResponse<T>> = process.env.NODE_ENV === 'development'
 ): NextApiHandler<APIResponse<T>> {
-	const logger = getLogger(logfn);
+	const logger = getLogger(errorHandler);
 
 	return async function (req, res) {
-		logger?.(req, res, 'Mounting route');
 		const handler = handlers[req.method as Method];
 
 		if (!handler) {
@@ -67,13 +76,14 @@ export function api<T>(
 			const result = await handler(req, res);
 
 			if (res.headersSent) {
-				const message =
-					'Headers have already been sent but we have not had the opportunity to reply with some data.';
+				const err = new Error(
+					'Headers have already been sent but we have not had the opportunity to reply with some data.'
+				);
 
 				if (process.env.NODE_ENV === 'development') {
-					throw new Error(`${message} This error was thrown because NODE_ENV was \`development\`.`);
+					throw err;
 				} else {
-					logger?.(req, res, message);
+					logger?.(req, res, err);
 				}
 
 				return;
