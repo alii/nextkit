@@ -49,8 +49,8 @@ function getLogger<T>(logger: NextkitLogger<T>): Exclude<NextkitLogger<T>, boole
 	return null;
 }
 
-export function createAPIWithHandledErrors<T>(handler: NextkitLogger<APIResponse<T>>) {
-	return (handlers: Partial<Record<Method, NextkitHandler<T>>>) => api(handlers, handler);
+export function createAPIWithHandledErrors(handler: NextkitLogger<APIResponse<unknown>>) {
+	return <T>(handlers: Partial<Record<Method, NextkitHandler<T>>>) => api(handlers, handler);
 }
 
 export function api<T>(
