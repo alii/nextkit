@@ -34,9 +34,7 @@
 		"lint": "eslint ./src/**/*.ts",
 		"fix": "eslint ./src/**/*.ts --fix"
 	},
-	"dependencies": {
-		"colorette": "^1.4.0"
-	},
+	"dependencies": {},
 	"bugs": {
 		"url": "https://github.com/alii/nextkit/issues"
 	},

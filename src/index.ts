@@ -1,4 +1,3 @@
-import {red, bold} from 'colorette';
 import {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
@@ -14,9 +13,11 @@ export type ErroredAPIResponse = {
 	message: string;
 };
 
-export type NextkitLogger<T> =
-	| boolean
-	| ((req: NextApiRequest, res: NextApiResponse<T>, err: Error) => unknown);
+export type NextkitErrorHandler = (
+	req: NextApiRequest,
+	res: NextApiResponse<ErroredAPIResponse>,
+	err: Error
+) => unknown;
 
 export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 
@@ -29,36 +30,14 @@ export type NextkitHandler<T> = (
 	res: NextApiResponse<APIResponse<T>>
 ) => Promise<T | REDIRECT>;
 
-function getLogger<T>(logger: NextkitLogger<T>): Exclude<NextkitLogger<T>, boolean> | null {
-	if (typeof logger === 'function') {
-		if (logger.length !== 3) {
-			throw new Error(
-				'Arguments given to Nextkit logger does not equal 3. These should be the request, response and error'
-			);
-		}
-
-		return logger;
-	}
-
-	if (logger) {
-		return function (req, res, err) {
-			console.error(`${bold(red('nextkit'))} –`, err);
-		};
-	}
-
-	return null;
-}
-
-export function createAPIWithHandledErrors(handler: NextkitLogger<APIResponse<unknown>>) {
+export function createAPIWithHandledErrors(handler: NextkitErrorHandler) {
 	return <T>(handlers: Partial<Record<Method, NextkitHandler<T>>>) => api(handlers, handler);
 }
 
 export function api<T>(
 	handlers: Partial<Record<Method, NextkitHandler<T>>>,
-	errorHandler: NextkitLogger<APIResponse<T>> = process.env.NODE_ENV === 'development'
+	errorHandler?: NextkitErrorHandler
 ): NextApiHandler<APIResponse<T>> {
-	const logger = getLogger(errorHandler);
-
 	return async function (req, res) {
 		const handler = handlers[req.method as Method];
 
@@ -74,20 +53,6 @@ export function api<T>(
 
 		try {
 			const result = await handler(req, res);
-
-			if (res.headersSent) {
-				const err = new Error(
-					'Headers have already been sent but we have not had the opportunity to reply with some data.'
-				);
-
-				if (process.env.NODE_ENV === 'development') {
-					throw err;
-				} else {
-					logger?.(req, res, err);
-				}
-
-				return;
-			}
 
 			if (typeof result === 'object' && '_redirect' in result) {
 				res.redirect(result._redirect);
@@ -112,8 +77,11 @@ export function api<T>(
 			const code = e instanceof HttpException ? e.code : 500;
 			const message = e instanceof HttpException ? e.message : 'Something went wrong';
 
-			if (code === 500) {
-				logger?.(req, res, e);
+			// We don't want to handle HttpExceptions.
+			// That is the whole point of using them.
+			if (!(e instanceof HttpException) && errorHandler) {
+				errorHandler(req, res, e);
+				return;
 			}
 
 			res.status(code).json({
