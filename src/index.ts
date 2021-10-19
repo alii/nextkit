@@ -2,16 +2,16 @@ import {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 
-export type SuccessfulAPIResponse<T> = {
+export interface SuccessfulAPIResponse<T> {
 	success: true;
 	data: T;
-};
+}
 
-export type ErroredAPIResponse = {
+export interface ErroredAPIResponse {
 	success: false;
 	data: null;
 	message: string;
-};
+}
 
 export type NextkitErrorHandler = (
 	req: NextApiRequest,
@@ -23,6 +23,7 @@ export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 
 // Never record is to not allow any keys even in a generic that might extend.
 // this limits any value passed as a generic to be strictly _redirect.
+// pg: https://www.typescriptlang.org/play?#code/C4TwDgpgBAdg9sAFgSxgcygXigbxgQwFsIAuKAZ2ACdU0BfKAMigCUIBjOKgEwB4YIANwhUANLCEiAfAFgAUPIBmAVxjtgyODCjB8AawjkAcghToAFAW74y8JLQCUueVCgB6N-Lrz5ug8dNaczwiUigAInDxfDQwgCY6BwBueSA
 export type REDIRECT = {_redirect: string} & Record<never, never>;
 
 export type NextkitHandler<T> = (

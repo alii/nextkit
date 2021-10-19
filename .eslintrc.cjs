@@ -14,6 +14,7 @@ module.exports = {
 		'@typescript-eslint/comma-dangle': 'off',
 		'operator-linebreak': 'off',
 		'@typescript-eslint/indent': 'off',
+		'@typescript-eslint/naming-convention': 'off',
 	},
 	ignorePatterns: ['dist'],
 };
