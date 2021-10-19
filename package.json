@@ -1,7 +1,7 @@
 {
 	"name": "nextkit",
 	"description": "API Toolkit for Next.js. Generate type-safe, error handled Next.js API routes.",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
@@ -19,22 +19,21 @@
 		"url": "https://github.com/sponsors/alii"
 	},
 	"devDependencies": {
-		"@typescript-eslint/eslint-plugin": "^4.30.0",
-		"@typescript-eslint/parser": "^4.30.0",
-		"eslint": "^7.32.0",
-		"eslint-config-xo": "^0.38.0",
-		"eslint-config-xo-typescript": "^0.44.0",
+		"@typescript-eslint/eslint-plugin": "^5.1.0",
+		"@typescript-eslint/parser": "^5.1.0",
+		"eslint": "^8.0.1",
+		"eslint-config-xo": "^0.39.0",
+		"eslint-config-xo-typescript": "^0.45.2",
 		"next": "^11.1.2",
-		"prettier": "^2.3.2",
-		"tsup": "^4.14.0",
-		"typescript": "^4.4.2"
+		"prettier": "^2.4.1",
+		"tsup": "^5.4.1",
+		"typescript": "^4.4.4"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --dts --format esm,cjs",
 		"lint": "eslint ./src/**/*.ts",
 		"fix": "eslint ./src/**/*.ts --fix"
 	},
-	"dependencies": {},
 	"bugs": {
 		"url": "https://github.com/alii/nextkit/issues"
 	},
