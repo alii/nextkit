@@ -155,7 +155,11 @@ export class HttpException extends Error {
 }
 
 export type RemoveRedirects<T> = Exclude<T, REDIRECT>;
-export type UnwrapHandlerResponse<T> = T extends () => Promise<infer Res> ? Res : never;
+
+// I have to use any here for some reason, unknown[] doesn't unwrap
+export type UnwrapHandlerResponse<T> = T extends (...args: any[]) => Promise<infer Res>
+	? Res
+	: never;
 export type InferAPIResponseType<T, M extends Method = Method> = RemoveRedirects<
 	T extends ExportedHandler<PullHandlerResponses<infer X>> ? UnwrapHandlerResponse<X[M]> : never
 >;
