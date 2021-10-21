@@ -160,8 +160,25 @@ export type RemoveRedirects<T> = Exclude<T, REDIRECT>;
 export type UnwrapHandlerResponse<T> = T extends (...args: any[]) => Promise<infer Res>
 	? Res
 	: never;
-export type InferAPIResponseType<T, M extends Method = Method> = RemoveRedirects<
+export type InferAPIResponseType<T, M extends Method> = RemoveRedirects<
 	T extends ExportedHandler<PullHandlerResponses<infer X>> ? UnwrapHandlerResponse<X[M]> : never
 >;
 
 export default api;
+
+// Testing area
+// const h = api({
+// 	async GET(req, res) {
+// 		return true;
+// 	},
+
+// 	async POST(req, res) {
+// 		return false;
+// 	},
+
+// 	async DELETE() {
+// 		return 0;
+// 	},
+// });
+
+// type Y = InferAPIResponseType<typeof h, 'GET'>;
