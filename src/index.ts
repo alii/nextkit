@@ -1,6 +1,8 @@
-import {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
+import {NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
+
+export type NextkitApiRequest<M extends Method> = NextApiRequest & {method: Extract<Method, M>};
 
 export interface SuccessfulAPIResponse<T> {
 	success: true;
@@ -26,46 +28,89 @@ export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
 // pg: https://www.typescriptlang.org/play?#code/C4TwDgpgBAdg9sAFgSxgcygXigbxgQwFsIAuKAZ2ACdU0BfKAMigCUIBjOKgEwB4YIANwhUANLCEiAfAFgAUPIBmAVxjtgyODCjB8AawjkAcghToAFAW74y8JLQCUueVCgB6N-Lrz5ug8dNaczwiUigAInDxfDQwgCY6BwBueSA
 export type REDIRECT = {_redirect: string} & Record<never, never>;
 
-export type NextkitHandler<T> = (
-	req: NextApiRequest,
+/**
+ * Handler for a nextkit route. T is the response type
+ */
+export type NextkitHandler<M extends Method, T> = (
+	req: NextkitApiRequest<M>,
 	res: NextApiResponse<APIResponse<T>>
 ) => Promise<T | REDIRECT>;
 
-export function createAPIWithHandledErrors(handler: NextkitErrorHandler) {
-	return <T>(handlers: Partial<Record<Method, NextkitHandler<T>>>) => api(handlers, handler);
+type ExportedHandler<Handlers> = (
+	req: NextApiRequest,
+	res: NextApiResponse<APIResponse<Handlers[keyof Handlers]>>
+) => Promise<void>;
+
+export type HandlersInit = Partial<{
+	[M in Method]: NextkitHandler<M, unknown>;
+}>;
+
+export type PullHandlerResponses<T extends HandlersInit> = {
+	[Key in keyof T]: NonNullable<T[Key]> extends NextkitHandler<Method, infer Y> ? Y : never;
+};
+
+export function createAPIWithHandledErrors(errHandler: NextkitErrorHandler) {
+	return <Handlers extends HandlersInit>(handlers: Handlers) => api(handlers, errHandler);
 }
 
-export function api<T>(
-	handlers: Partial<Record<Method, NextkitHandler<T>>>,
+function hasProp<Prop extends string | number | symbol>(
+	value: unknown,
+	prop: Prop
+): value is Record<Prop, unknown> {
+	if (typeof value !== 'object') {
+		return false;
+	}
+
+	if (!value) {
+		return false;
+	}
+
+	return prop in value;
+}
+
+/**
+ * Create a type-safe api route
+ * @param handlers The object of handlers to run for this route
+ * @param errorHandler An optional error handler. Preferred usage is with the createAPIWithHandledErrors function
+ * @returns A NextApiHandler
+ */
+export function api<Handlers extends HandlersInit>(
+	handlers: Handlers,
 	errorHandler?: NextkitErrorHandler
-): NextApiHandler<APIResponse<T>> {
-	return async function (req, res) {
+): ExportedHandler<PullHandlerResponses<Handlers>> {
+	return async (req, res) => {
 		const handler = handlers[req.method as Method];
 
 		if (!handler) {
-			res.status(405).json({
+			res.status(409).json({
 				success: false,
 				data: null,
-				message: `Cannot ${req.method ?? 'n/a'} this endpoint!`,
+				message: `Cannot ${req.method as Method} this route.`,
 			});
 
 			return;
 		}
 
 		try {
-			const result = await handler(req, res);
+			const result = await handler(
+				// TypeScript has beaten me :(
+				// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+				// @ts-expect-error
+				req,
+				res
+			);
 
-			if (typeof result === 'object' && '_redirect' in result) {
-				res.redirect(result._redirect);
+			if (hasProp(result, '_redirect')) {
+				res.redirect(result._redirect as string);
 				return;
 			}
 
 			res.json({
 				success: true,
-				data: result,
+				data: result as PullHandlerResponses<Handlers>[keyof Handlers],
 			});
-		} catch (e: unknown) {
-			if (!(e instanceof Error)) {
+		} catch (error: unknown) {
+			if (!(error instanceof Error)) {
 				res.status(500).json({
 					success: false,
 					data: null,
@@ -75,13 +120,13 @@ export function api<T>(
 				return;
 			}
 
-			const code = e instanceof HttpException ? e.code : 500;
-			const message = e instanceof HttpException ? e.message : 'Something went wrong';
+			const code = error instanceof HttpException ? error.code : 500;
+			const message = error instanceof HttpException ? error.message : 'Something went wrong';
 
 			// We don't want to handle HttpExceptions.
 			// That is the whole point of using them.
-			if (!(e instanceof HttpException) && errorHandler) {
-				errorHandler(req, res, e);
+			if (!(error instanceof HttpException) && errorHandler) {
+				errorHandler(req, res, error);
 				return;
 			}
 
@@ -94,13 +139,25 @@ export function api<T>(
 	};
 }
 
+/**
+ * Class that represents an error thrown on the server.
+ */
 export class HttpException extends Error {
-	constructor(public readonly code: number, message: string) {
+	/**
+	 * Constructor for HttpException
+	 * @constructor
+	 * @param code The HTTP code to reply with
+	 * @param message A message shipped back in the response json
+	 */
+	constructor(public readonly code = 500, message = 'Something went wrong!') {
 		super(message);
 	}
 }
 
-export type RemoveRedirects<T> = T extends REDIRECT ? never : T;
-export type InferAPIResponseType<T> = RemoveRedirects<
-	T extends NextApiHandler<APIResponse<infer X>> ? X : T
+export type RemoveRedirects<T> = Exclude<T, REDIRECT>;
+export type UnwrapHandlerResponse<T> = T extends () => Promise<infer Res> ? Res : never;
+export type InferAPIResponseType<T, M extends Method = Method> = RemoveRedirects<
+	T extends ExportedHandler<PullHandlerResponses<infer X>> ? UnwrapHandlerResponse<X[M]> : never
 >;
+
+export default api;

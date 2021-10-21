@@ -2861,10 +2861,10 @@ tslib@^1.8.1:
   resolved "https://registry.npmjs.org/tslib/-/tslib-1.14.1.tgz"
   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
-tsup@^5.4.1:
-  version "5.4.1"
-  resolved "https://registry.yarnpkg.com/tsup/-/tsup-5.4.1.tgz#3cd1d1ea5d6c60f798f6796c64003858419615b0"
-  integrity sha512-A2uGsLy3P4swe7UHAPJGOPIXBn/fXnm0SpGutvks7nVDsK8HP315Hddf7jjiVYhA4D39QhD9ehnQcmJbL19zcQ==
+tsup@^5.4.2:
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/tsup/-/tsup-5.4.2.tgz#e8940db65505b2011ca37c5785721deed0070569"
+  integrity sha512-R6Vxq6lrxvKBc9ZbJShHqARlysCxcEAXss9iyLPbZZDIl3CSftrO2IN0Flgkt6hMt1sTwgsXL3v5Ot3l305W1Q==
   dependencies:
     cac "^6.7.2"
     chalk "^4.1.0"
