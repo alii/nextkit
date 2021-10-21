@@ -1,7 +1,7 @@
 {
 	"name": "nextkit",
 	"description": "API Toolkit for Next.js. Generate type-safe, error handled Next.js API routes.",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
