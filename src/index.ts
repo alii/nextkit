@@ -2,7 +2,10 @@ import {NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 
-export type NextkitApiRequest<M extends Method> = NextApiRequest & {method: Extract<Method, M>};
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type NextkitApiRequest<M extends Method> = Omit<NextApiRequest, 'method'> & {
+	method: M;
+};
 
 export interface SuccessfulAPIResponse<T> {
 	success: true;
@@ -37,7 +40,7 @@ export type NextkitHandler<M extends Method, T> = (
 ) => Promise<T | REDIRECT>;
 
 type ExportedHandler<Handlers> = (
-	req: NextApiRequest,
+	req: NextkitApiRequest<Method>,
 	res: NextApiResponse<APIResponse<Handlers[keyof Handlers]>>
 ) => Promise<void>;
 
@@ -79,26 +82,22 @@ export function api<Handlers extends HandlersInit>(
 	errorHandler?: NextkitErrorHandler
 ): ExportedHandler<PullHandlerResponses<Handlers>> {
 	return async (req, res) => {
-		const handler = handlers[req.method as Method];
+		const handler = handlers[req.method];
 
 		if (!handler) {
 			res.status(409).json({
 				success: false,
 				data: null,
-				message: `Cannot ${req.method as Method} this route.`,
+				message: `Cannot ${req.method} this route.`,
 			});
 
 			return;
 		}
 
 		try {
-			const result = await handler(
-				// TypeScript has beaten me :(
-				// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-				// @ts-expect-error
-				req,
-				res
-			);
+			// Bruh req as never ?!?!?!
+			// reading: https://discord.com/channels/508357248330760243/746364189710483546/900762016443150446
+			const result = await handler(req as never, res as NextApiResponse<APIResponse<unknown>>);
 
 			if (hasProp(result, '_redirect')) {
 				res.redirect(result._redirect as string);
@@ -120,15 +119,15 @@ export function api<Handlers extends HandlersInit>(
 				return;
 			}
 
-			const code = error instanceof HttpException ? error.code : 500;
-			const message = error instanceof HttpException ? error.message : 'Something went wrong';
-
 			// We don't want to handle HttpExceptions.
 			// That is the whole point of using them.
 			if (!(error instanceof HttpException) && errorHandler) {
 				errorHandler(req, res, error);
 				return;
 			}
+
+			const code = error instanceof HttpException ? error.code : 500;
+			const message = error instanceof HttpException ? error.message : 'Something went wrong';
 
 			res.status(code).json({
 				success: false,
