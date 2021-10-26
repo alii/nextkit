@@ -2,7 +2,6 @@ import {NextApiRequest, NextApiResponse} from 'next';
 
 export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export type NextkitApiRequest<M extends Method> = Omit<NextApiRequest, 'method'> & {
 	method: M;
 };
@@ -44,16 +43,21 @@ type ExportedHandler<Handlers> = (
 	res: NextApiResponse<APIResponse<Handlers[keyof Handlers]>>
 ) => Promise<void>;
 
-export type HandlersInit = Partial<{
-	[M in Method]: NextkitHandler<M, unknown>;
-}>;
+type HandlersInit = Partial<Record<Method, unknown>>;
 
 export type PullHandlerResponses<T extends HandlersInit> = {
 	[Key in keyof T]: NonNullable<T[Key]> extends NextkitHandler<Method, infer Y> ? Y : never;
 };
 
 export function createAPIWithHandledErrors(errHandler: NextkitErrorHandler) {
-	return <Handlers extends HandlersInit>(handlers: Handlers) => api(handlers, errHandler);
+	return <
+		Init extends HandlersInit,
+		Handlers extends {[K in keyof Init]: NextkitHandler<K & Method, Init[K]>} = {
+			[K in keyof Init]: NextkitHandler<K & Method, Init[K]>;
+		}
+	>(
+		handlers: Handlers
+	) => api(handlers, errHandler);
 }
 
 function hasProp<Prop extends string | number | symbol>(
@@ -71,13 +75,20 @@ function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
+type MapHandlers<Init extends HandlersInit> = {
+	[K in keyof Init]: NextkitHandler<K & Method, Init[K]>;
+};
+
 /**
  * Create a type-safe api route
  * @param handlers The object of handlers to run for this route
  * @param errorHandler An optional error handler. Preferred usage is with the createAPIWithHandledErrors function
  * @returns A NextApiHandler
  */
-export function api<Handlers extends HandlersInit>(
+export function api<
+	Init extends HandlersInit,
+	Handlers extends MapHandlers<Init> = MapHandlers<Init>
+>(
 	handlers: Handlers,
 	errorHandler?: NextkitErrorHandler
 ): ExportedHandler<PullHandlerResponses<Handlers>> {
@@ -100,7 +111,7 @@ export function api<Handlers extends HandlersInit>(
 			const result = await handler(req as never, res as NextApiResponse<APIResponse<unknown>>);
 
 			if (hasProp(result, '_redirect')) {
-				res.redirect(result._redirect as string);
+				res.redirect(result._redirect);
 				return;
 			}
 
@@ -166,18 +177,19 @@ export type InferAPIResponseType<T, M extends Method> = RemoveRedirects<
 export default api;
 
 // Testing area
-// const h = api({
-// 	async GET(req, res) {
-// 		return true;
-// 	},
+const h = api({
+	async GET() {
+		return 'dsads' as const;
+	},
 
-// 	async POST(req, res) {
-// 		return false;
-// 	},
+	async POST() {
+		return false;
+	},
 
-// 	async DELETE() {
-// 		return 0;
-// 	},
-// });
+	async DELETE() {
+		return 0;
+	},
+});
 
-// type Y = InferAPIResponseType<typeof h, 'GET'>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type Y = InferAPIResponseType<typeof h, 'GET'>;
