@@ -75,7 +75,7 @@ function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
-type MapHandlers<Init extends HandlersInit> = {
+export type MapHandlers<Init extends HandlersInit> = {
 	[K in keyof Init]: NextkitHandler<K & Method, Init[K]>;
 };
 
@@ -86,6 +86,8 @@ type MapHandlers<Init extends HandlersInit> = {
  * @returns A NextApiHandler
  */
 export function api<
+	// Two generics, Init is not inferred but by using two here it allows us to strictly type the return values from each method.
+	// we can then set Handlers to have a default value (which shouldn't ever change tbh)
 	Init extends HandlersInit,
 	Handlers extends MapHandlers<Init> = MapHandlers<Init>
 >(
@@ -130,7 +132,7 @@ export function api<
 				return;
 			}
 
-			// We don't want to handle HttpExceptions.
+			// We don't want to handle HttpExceptions .
 			// That is the whole point of using them.
 			if (!(error instanceof HttpException) && errorHandler) {
 				errorHandler(req, res, error);
@@ -170,26 +172,28 @@ export type RemoveRedirects<T> = Exclude<T, REDIRECT>;
 export type UnwrapHandlerResponse<T> = T extends (...args: any[]) => Promise<infer Res>
 	? Res
 	: never;
-export type InferAPIResponseType<T, M extends Method> = RemoveRedirects<
-	T extends ExportedHandler<PullHandlerResponses<infer X>> ? UnwrapHandlerResponse<X[M]> : never
+export type InferAPIResponseType<T, M extends Method | Lowercase<Method>> = RemoveRedirects<
+	T extends ExportedHandler<PullHandlerResponses<infer X>>
+		? UnwrapHandlerResponse<X[Uppercase<M>]>
+		: never
 >;
 
 export default api;
 
-// Testing area
-const h = api({
-	async GET() {
-		return 'dsads' as const;
-	},
+// // Testing area
+// const h = api({
+// 	async GET() {
+// 		return 'dsads' as const;
+// 	},
 
-	async POST() {
-		return false;
-	},
+// 	async POST() {
+// 		return false;
+// 	},
 
-	async DELETE() {
-		return 0;
-	},
-});
+// 	async DELETE() {
+// 		return 0;
+// 	},
+// });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type Y = InferAPIResponseType<typeof h, 'GET'>;
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// type Y = InferAPIResponseType<typeof h, 'get'>;
