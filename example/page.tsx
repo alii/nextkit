@@ -5,7 +5,7 @@ import type api from './hello';
 import type {InferAPIResponseType} from '../src';
 import useSWR from 'swr';
 
-type Data = InferAPIResponseType<typeof api>;
+type Data = InferAPIResponseType<typeof api, 'GET'>;
 
 export default function HomePage() {
 	const {data} = useSWR<Data>('/api/hello');
