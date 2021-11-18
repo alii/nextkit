@@ -15,6 +15,7 @@ module.exports = {
 		'operator-linebreak': 'off',
 		'@typescript-eslint/indent': 'off',
 		'@typescript-eslint/naming-convention': 'off',
+		'arrow-body-style': 'off',
 	},
 	ignorePatterns: ['dist'],
 };
