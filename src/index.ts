@@ -74,6 +74,13 @@ export type MapHandlerResults<Context, Handlers extends HandlersMap<Context, Han
 	[Method in keyof Handlers]: Handlers[Method] extends NextkitHandler<Context, infer R> ? R : never;
 };
 
+export type Then<T> = T extends PromiseLike<infer R> ? Then<R> : T;
+export type ThenFn<T> = T extends (...args: any) => PromiseLike<infer R> ? R : T;
+
+export type InferAPIResponse<T> = T extends ExportedHandler<MapHandlerResults<any, infer Handlers>>
+	? {[Method in keyof Handlers]: ThenFn<Handlers[Method]>}
+	: never;
+
 export default function createAPI<Context = null>(config: Config<Context>) {
 	return <
 		Init extends HandlerInit,
@@ -84,17 +91,18 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 		return async (req, res) => {
 			const handler = handlers[req.method as Method];
 
-			if (!handler) {
-				throw new NextkitException(405, `Cannot ${req.method ?? 'n/a'} this route`);
-			}
-
-			// Context will be null if no getContext is provided. The type is null when the option is not provided
-			// into context, so it's safe to default to null here. We should cast to `never` to make sure
-			// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
-			// it from the type
-			const context = 'getContext' in config ? await config.getContext(req, res) : (null as never);
-
 			try {
+				if (!handler) {
+					throw new NextkitException(405, `Cannot ${req.method ?? 'n/a'} this route`);
+				}
+
+				// Context will be null if no getContext is provided. The type is null when the option is not provided
+				// into context, so it's safe to default to null here. We should cast to `never` to make sure
+				// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
+				// it from the type
+				const context =
+					'getContext' in config ? await config.getContext(req, res) : (null as never);
+
 				const result = await handler({
 					context,
 					req,
@@ -131,7 +139,16 @@ const api = createAPI({
 });
 
 const example = api({
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async POST({context, req, res}) {
 		return 'Bruh' as const;
 	},
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	async GET({context}) {
+		return 'hello' as const;
+	},
 });
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type API = InferAPIResponse<typeof example>;
