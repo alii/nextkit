@@ -20,7 +20,7 @@ export interface SuccessAPIResponse<T> extends BaseAPIResponse {
 
 export type APIResponse<T> = SuccessAPIResponse<T> | ErroredAPIResponse;
 
-type NextkitErrorHandler = (
+export type NextkitErrorHandler = (
 	req: NextApiRequest,
 	res: NextApiResponse<ErroredAPIResponse>,
 	error: Error
@@ -33,11 +33,13 @@ export interface ConfigWithoutContext {
 	onError: NextkitErrorHandler;
 }
 
+export type Redirect = {_redirect: string};
+
 export type NextkitHandler<Context, Result> = (data: {
 	context: Context;
 	req: NextApiRequest;
 	res: NextApiResponse<APIResponse<Result>>;
-}) => Promise<Result>;
+}) => Promise<Result | Redirect>;
 
 export type HandlerInit = Partial<Record<Method, unknown>>;
 
@@ -62,7 +64,7 @@ export class WrappedNonErrorException<T> extends Error {
 export type Config<Context = null> = ConfigWithContext<Context> | ConfigWithoutContext;
 
 export type HandlersMap<Context, Init> = {
-	[Method in keyof Init]: NextkitHandler<Context, Init[Method]>;
+	[Method in keyof Init]: NextkitHandler<Context, Init[Method] | Redirect>;
 };
 
 export type ExportedHandler<Handlers extends HandlerInit> = (
@@ -77,9 +79,26 @@ export type MapHandlerResults<Context, Handlers extends HandlersMap<Context, Han
 export type Then<T> = T extends PromiseLike<infer R> ? Then<R> : T;
 export type ThenFn<T> = T extends (...args: any) => PromiseLike<infer R> ? R : T;
 
-export type InferAPIResponse<T> = T extends ExportedHandler<MapHandlerResults<any, infer Handlers>>
-	? {[Method in keyof Handlers]: ThenFn<Handlers[Method]>}
+export type InferAPIResponses<T> = T extends ExportedHandler<MapHandlerResults<any, infer Handlers>>
+	? {[Method in keyof Handlers]: Exclude<ThenFn<Handlers[Method]>, Redirect>}
 	: never;
+
+export type InferAPIResponse<T, M extends Method> = InferAPIResponses<T>[M];
+
+export function hasProp<Prop extends string | number | symbol>(
+	value: unknown,
+	prop: Prop
+): value is Record<Prop, unknown> {
+	if (typeof value !== 'object') {
+		return false;
+	}
+
+	if (!value) {
+		return false;
+	}
+
+	return prop in value;
+}
 
 export default function createAPI<Context = null>(config: Config<Context>) {
 	return <
@@ -109,6 +128,11 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					res: res as NextApiResponse<APIResponse<unknown>>,
 				});
 
+				if (hasProp(result, '_redirect')) {
+					res.redirect(result._redirect);
+					return;
+				}
+
 				res.json({
 					success: true,
 					data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
@@ -116,6 +140,18 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					message: null,
 				});
 			} catch (error: unknown) {
+				// Nextkit Exceptions are intended to be handled by nextkit and returned by the API without the onError func
+				if (error instanceof NextkitException) {
+					res.status(error.code).json({
+						status: error.code,
+						message: error.message,
+						data: null,
+						success: false,
+					});
+
+					return;
+				}
+
 				const wrapped = error instanceof Error ? error : new WrappedNonErrorException(error);
 
 				const result = await config.onError(req, res, wrapped);
@@ -132,23 +168,3 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 }
 
 export {createAPI};
-
-const api = createAPI({
-	getContext: async () => 'test' as const,
-	onError: async (req, res, err) => ({status: 500, message: err.message}),
-});
-
-const example = api({
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async POST({context, req, res}) {
-		return 'Bruh' as const;
-	},
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async GET({context}) {
-		return 'hello' as const;
-	},
-});
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type API = InferAPIResponse<typeof example>;

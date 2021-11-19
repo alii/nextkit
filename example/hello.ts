@@ -1,23 +1,28 @@
-// Don't import src, use `from 'nextkit';` 😃
-import {api, HttpException} from '../src';
+import {createAPI, NextkitException} from '../src';
 
-export default api({
-	// Example of standard use
-	async GET() {
+const api = createAPI({
+	getContext: async (req, res) => {
 		return {
 			time: Date.now(),
+			userAgent: req.headers['user-agent'],
+			setHeader: res.setHeader,
 		};
 	},
+	onError: async (req, res, err) => ({status: 500, message: err.message}),
+});
 
-	// Example of redirecting a request
-	async POST() {
+export default api({
+	async POST({context}) {
 		return {
-			_redirect: '/',
+			agent: context.userAgent,
 		};
 	},
 
-	// Example of throwing an intentional error (the message gets sent back to the client)
+	async GET({context}) {
+		return context.time;
+	},
+
 	async DELETE() {
-		throw new HttpException(400, 'This endpoint threw a 400!');
+		throw new NextkitException(400, 'This endpoint threw a 400!');
 	},
 });

@@ -19,15 +19,15 @@
 		"url": "https://github.com/sponsors/alii"
 	},
 	"devDependencies": {
-		"@typescript-eslint/eslint-plugin": "^5.1.0",
-		"@typescript-eslint/parser": "^5.1.0",
-		"eslint": "^8.0.1",
+		"@typescript-eslint/eslint-plugin": "^5.4.0",
+		"@typescript-eslint/parser": "^5.4.0",
+		"eslint": "^8.2.0",
 		"eslint-config-xo": "^0.39.0",
-		"eslint-config-xo-typescript": "^0.45.2",
-		"next": "^11.1.2",
+		"eslint-config-xo-typescript": "^0.47.1",
+		"next": "^12.0.4",
 		"prettier": "^2.4.1",
-		"tsup": "^5.4.2",
-		"typescript": "^4.4.4"
+		"tsup": "^5.7.2",
+		"typescript": "^4.5.2"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --dts --format esm,cjs",
@@ -52,7 +52,6 @@
 		"vercel"
 	],
 	"peerDependencies": {
-		"next": "^11.1.2"
-	},
-	"dependencies": {}
+		"next": "^12.0.4"
+	}
 }
