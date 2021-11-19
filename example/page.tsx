@@ -1,15 +1,14 @@
 // Just an example, we can disable all rules here
 /* eslint-disable */
+// @ts-nocheck
 
 import type api from './hello';
-import type {InferAPIResponseType} from '../src';
+import type {InferAPIResponse} from '../src';
 import useSWR from 'swr';
 
-type Data = InferAPIResponseType<typeof api, 'GET'>;
+type Data = InferAPIResponse<typeof api, 'GET'>;
 
 export default function HomePage() {
 	const {data} = useSWR<Data>('/api/hello');
-
-	// @ts-expect-error
-	return <div>{data.time}</div>;
+	return <div>{data}</div>;
 }

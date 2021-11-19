@@ -1,66 +1,91 @@
 import {NextApiRequest, NextApiResponse} from 'next';
 
-export type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
-
-export type NextkitApiRequest<M extends Method> = Omit<NextApiRequest, 'method'> & {
-	method: M;
-};
-
-export interface SuccessfulAPIResponse<T> {
-	success: true;
-	data: T;
+export interface BaseAPIResponse {
+	status: number;
 }
 
-export interface ErroredAPIResponse {
+export interface ErroredAPIResponse extends BaseAPIResponse {
 	success: false;
 	data: null;
 	message: string;
 }
 
+export type Method = 'POST' | 'DELETE' | 'GET' | 'PATCH' | 'PUT';
+
+export interface SuccessAPIResponse<T> extends BaseAPIResponse {
+	success: true;
+	data: T;
+	message: null;
+}
+
+export type APIResponse<T> = SuccessAPIResponse<T> | ErroredAPIResponse;
+
 export type NextkitErrorHandler = (
 	req: NextApiRequest,
 	res: NextApiResponse<ErroredAPIResponse>,
-	err: Error
-) => unknown;
+	error: Error
+) => Promise<{
+	status: number;
+	message: string;
+}>;
 
-export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
+export interface ConfigWithoutContext {
+	onError: NextkitErrorHandler;
+}
 
-// Never record is to not allow any keys even in a generic that might extend.
-// this limits any value passed as a generic to be strictly _redirect.
-// pg: https://www.typescriptlang.org/play?#code/C4TwDgpgBAdg9sAFgSxgcygXigbxgQwFsIAuKAZ2ACdU0BfKAMigCUIBjOKgEwB4YIANwhUANLCEiAfAFgAUPIBmAVxjtgyODCjB8AawjkAcghToAFAW74y8JLQCUueVCgB6N-Lrz5ug8dNaczwiUigAInDxfDQwgCY6BwBueSA
-export type REDIRECT = {_redirect: string} & Record<never, never>;
+export type Redirect = {_redirect: string};
 
-/**
- * Handler for a nextkit route. T is the response type
- */
-export type NextkitHandler<M extends Method, T> = (
-	req: NextkitApiRequest<M>,
-	res: NextApiResponse<APIResponse<T>>
-) => Promise<T | REDIRECT>;
+export type NextkitHandler<Context, Result> = (data: {
+	context: Context;
+	req: NextApiRequest;
+	res: NextApiResponse<APIResponse<Result>>;
+}) => Promise<Result | Redirect>;
 
-type ExportedHandler<Handlers> = (
-	req: NextkitApiRequest<Method>,
+export type HandlerInit = Partial<Record<Method, unknown>>;
+
+export interface ConfigWithContext<Context> extends ConfigWithoutContext {
+	getContext(req: NextApiRequest, res: NextApiResponse<APIResponse<any>>): Promise<Context>;
+}
+
+export class NextkitException extends Error {
+	constructor(public readonly code: number, message: string) {
+		super(message);
+	}
+}
+
+export class WrappedNonErrorException<T> extends Error {
+	constructor(public readonly data: T) {
+		super(
+			'Some data was thrown, but it was not an instance of an Error, so a WrappedNonErrorException was thrown instead. Access the .data property to read the original data that was thrown'
+		);
+	}
+}
+
+export type Config<Context = null> = ConfigWithContext<Context> | ConfigWithoutContext;
+
+export type HandlersMap<Context, Init> = {
+	[Method in keyof Init]: NextkitHandler<Context, Init[Method] | Redirect>;
+};
+
+export type ExportedHandler<Handlers extends HandlerInit> = (
+	req: NextApiRequest,
 	res: NextApiResponse<APIResponse<Handlers[keyof Handlers]>>
 ) => Promise<void>;
 
-type HandlersInit = Partial<Record<Method, unknown>>;
-
-export type PullHandlerResponses<T extends HandlersInit> = {
-	[Key in keyof T]: NonNullable<T[Key]> extends NextkitHandler<Method, infer Y> ? Y : never;
+export type MapHandlerResults<Context, Handlers extends HandlersMap<Context, HandlerInit>> = {
+	[Method in keyof Handlers]: Handlers[Method] extends NextkitHandler<Context, infer R> ? R : never;
 };
 
-export function createAPIWithHandledErrors(errHandler: NextkitErrorHandler) {
-	return <
-		Init extends HandlersInit,
-		Handlers extends {[K in keyof Init]: NextkitHandler<K & Method, Init[K]>} = {
-			[K in keyof Init]: NextkitHandler<K & Method, Init[K]>;
-		}
-	>(
-		handlers: Handlers
-	) => api(handlers, errHandler);
-}
+export type Then<T> = T extends PromiseLike<infer R> ? Then<R> : T;
+export type ThenFn<T> = T extends (...args: any) => PromiseLike<infer R> ? R : T;
 
-function hasProp<Prop extends string | number | symbol>(
+export type InferAPIResponses<T> = T extends ExportedHandler<MapHandlerResults<any, infer Handlers>>
+	? {[Method in keyof Handlers]: Exclude<ThenFn<Handlers[Method]>, Redirect>}
+	: never;
+
+export type InferAPIResponse<T, M extends Method> = InferAPIResponses<T>[M];
+
+export function hasProp<Prop extends string | number | symbol>(
 	value: unknown,
 	prop: Prop
 ): value is Record<Prop, unknown> {
@@ -75,125 +100,71 @@ function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
-export type MapHandlers<Init extends HandlersInit> = {
-	[K in keyof Init]: NextkitHandler<K & Method, Init[K]>;
-};
+export default function createAPI<Context = null>(config: Config<Context>) {
+	return <
+		Init extends HandlerInit,
+		Handlers extends HandlersMap<Context, Init> = HandlersMap<Context, Init>
+	>(
+		handlers: Handlers
+	): ExportedHandler<MapHandlerResults<Context, Handlers>> => {
+		return async (req, res) => {
+			const handler = handlers[req.method as Method];
 
-/**
- * Create a type-safe api route
- * @param handlers The object of handlers to run for this route
- * @param errorHandler An optional error handler. Preferred usage is with the createAPIWithHandledErrors function
- * @returns A NextApiHandler
- */
-export function api<
-	// Two generics, Init is not inferred but by using two here it allows us to strictly type the return values from each method.
-	// we can then set Handlers to have a default value (which shouldn't ever change tbh)
-	Init extends HandlersInit,
-	Handlers extends MapHandlers<Init> = MapHandlers<Init>
->(
-	handlers: Handlers,
-	errorHandler?: NextkitErrorHandler
-): ExportedHandler<PullHandlerResponses<Handlers>> {
-	return async (req, res) => {
-		const handler = handlers[req.method];
+			try {
+				if (!handler) {
+					throw new NextkitException(405, `Cannot ${req.method ?? 'n/a'} this route`);
+				}
 
-		if (!handler) {
-			res.status(409).json({
-				success: false,
-				data: null,
-				message: `Cannot ${req.method} this route.`,
-			});
+				// Context will be null if no getContext is provided. The type is null when the option is not provided
+				// into context, so it's safe to default to null here. We should cast to `never` to make sure
+				// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
+				// it from the type
+				const context =
+					'getContext' in config ? await config.getContext(req, res) : (null as never);
 
-			return;
-		}
-
-		try {
-			// Bruh req as never ?!?!?!
-			// reading: https://discord.com/channels/508357248330760243/746364189710483546/900762016443150446
-			const result = await handler(req as never, res as NextApiResponse<APIResponse<unknown>>);
-
-			if (hasProp(result, '_redirect')) {
-				res.redirect(result._redirect);
-				return;
-			}
-
-			res.json({
-				success: true,
-				data: result as PullHandlerResponses<Handlers>[keyof Handlers],
-			});
-		} catch (error: unknown) {
-			if (!(error instanceof Error)) {
-				res.status(500).json({
-					success: false,
-					data: null,
-					message: 'Something went wrong.',
+				const result = await handler({
+					context,
+					req,
+					res: res as NextApiResponse<APIResponse<unknown>>,
 				});
 
-				return;
+				if (hasProp(result, '_redirect')) {
+					res.redirect(result._redirect);
+					return;
+				}
+
+				res.json({
+					success: true,
+					data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
+					status: 200,
+					message: null,
+				});
+			} catch (error: unknown) {
+				// Nextkit Exceptions are intended to be handled by nextkit and returned by the API without the onError func
+				if (error instanceof NextkitException) {
+					res.status(error.code).json({
+						status: error.code,
+						message: error.message,
+						data: null,
+						success: false,
+					});
+
+					return;
+				}
+
+				const wrapped = error instanceof Error ? error : new WrappedNonErrorException(error);
+
+				const result = await config.onError(req, res, wrapped);
+
+				res.status(result.status).json({
+					success: false,
+					data: null,
+					message: result.message,
+					status: result.status,
+				});
 			}
-
-			// We don't want to handle HttpExceptions .
-			// That is the whole point of using them.
-			if (!(error instanceof HttpException) && errorHandler) {
-				errorHandler(req, res, error);
-				return;
-			}
-
-			const code = error instanceof HttpException ? error.code : 500;
-			const message = error instanceof HttpException ? error.message : 'Something went wrong';
-
-			res.status(code).json({
-				success: false,
-				data: null,
-				message,
-			});
-		}
+		};
 	};
 }
 
-/**
- * Class that represents an error thrown on the server.
- */
-export class HttpException extends Error {
-	/**
-	 * Constructor for HttpException
-	 * @constructor
-	 * @param code The HTTP code to reply with
-	 * @param message A message shipped back in the response json
-	 */
-	constructor(public readonly code = 500, message = 'Something went wrong!') {
-		super(message);
-	}
-}
-
-export type RemoveRedirects<T> = Exclude<T, REDIRECT>;
-
-// I have to use any here for some reason, unknown[] doesn't unwrap
-export type UnwrapHandlerResponse<T> = T extends (...args: any[]) => Promise<infer Res>
-	? Res
-	: never;
-export type InferAPIResponseType<T, M extends Method | Lowercase<Method>> = RemoveRedirects<
-	T extends ExportedHandler<PullHandlerResponses<infer X>>
-		? UnwrapHandlerResponse<X[Uppercase<M>]>
-		: never
->;
-
-export default api;
-
-// // Testing area
-// const h = api({
-// 	async GET() {
-// 		return 'dsads' as const;
-// 	},
-
-// 	async POST() {
-// 		return false;
-// 	},
-
-// 	async DELETE() {
-// 		return 0;
-// 	},
-// });
-
-// // eslint-disable-next-line @typescript-eslint/no-unused-vars
-// type Y = InferAPIResponseType<typeof h, 'get'>;
+export {createAPI};
