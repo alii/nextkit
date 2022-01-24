@@ -25,7 +25,8 @@
 	},
 	"scripts": {
 		"lint": "eslint ./packages/**/*.ts",
-		"fix": "eslint ./packages/**/*.ts --fix"
+		"fix": "eslint ./packages/**/*.ts --fix",
+		"release": "yarn preconstruct build && yarn workspace nextkit npm publish"
 	},
 	"bugs": {
 		"url": "https://github.com/alii/nextkit/issues"
