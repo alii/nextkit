@@ -1,5 +1,5 @@
 {
-	"name": "nextkit-monorepo",
+	"name": "nextkit-core",
 	"description": "API Toolkit for Next.js. Generate type-safe, error handled Next.js API routes.",
 	"repository": {
 		"type": "git",

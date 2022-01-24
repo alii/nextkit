@@ -3790,9 +3790,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nextkit-monorepo@workspace:.":
+"nextkit-core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "nextkit-monorepo@workspace:."
+  resolution: "nextkit-core@workspace:."
   dependencies:
     "@babel/preset-env": ^7.16.11
     "@babel/preset-typescript": ^7.16.7

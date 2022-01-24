@@ -9,5 +9,11 @@
 	},
 	"peerDependencies": {
 		"next": "*"
+	},
+	"preconstruct": {
+		"entrypoints": [
+			"index.ts",
+			"client.ts"
+		]
 	}
 }

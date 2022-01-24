@@ -9,7 +9,6 @@
 		"declarationMap": true,
 		"moduleResolution": "node",
 		"strict": true,
-		"jsx": "react",
 		"isolatedModules": true
 	},
 	"exclude": ["node_modules", "dist"]

@@ -1,0 +1,4 @@
+{
+	"main": "dist/nextkit-client.cjs.js",
+	"module": "dist/nextkit-client.esm.js"
+}
