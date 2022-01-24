@@ -1,4 +1,5 @@
 {
 	"main": "dist/nextkit-client.cjs.js",
-	"module": "dist/nextkit-client.esm.js"
+	"module": "dist/nextkit-client.esm.js",
+	"typings": "dist/nextkit-client.cjs.d.ts"
 }
