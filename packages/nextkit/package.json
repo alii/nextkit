@@ -1,0 +1,13 @@
+{
+	"name": "nextkit",
+	"packageManager": "yarn@3.1.1",
+	"version": "2.0.3",
+	"main": "dist/nextkit.cjs.js",
+	"module": "dist/nextkit.esm.js",
+	"devDependencies": {
+		"next": "^12.0.8"
+	},
+	"peerDependencies": {
+		"next": "*"
+	}
+}

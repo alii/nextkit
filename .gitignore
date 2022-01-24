@@ -4,3 +4,6 @@ dist
 .idea
 *.log
 .DS_Store
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
