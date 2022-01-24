@@ -16,6 +16,8 @@ module.exports = {
 		'@typescript-eslint/indent': 'off',
 		'@typescript-eslint/naming-convention': 'off',
 		'arrow-body-style': 'off',
+		'@typescript-eslint/ban-types': 'off',
+		'@typescript-eslint/quotes': 'off',
 	},
 	ignorePatterns: ['dist'],
 };

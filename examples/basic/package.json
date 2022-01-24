@@ -1,0 +1,15 @@
+{
+	"name": "@nextkit/example-basic",
+	"packageManager": "yarn@3.1.1",
+	"dependencies": {
+		"@preconstruct/next": "^3.0.1",
+		"next": "^12.0.8",
+		"react": "^17.0.2",
+		"react-dom": "^17.0.2",
+		"swr": "^1.1.2"
+	},
+	"devDependencies": {
+		"@types/react": "^17.0.38",
+		"typescript": "^4.5.5"
+	}
+}
