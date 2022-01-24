@@ -19,15 +19,16 @@ export class NextkitClientException extends Error implements NextkitException {
 }
 
 export default function createAPIClient(base: string) {
-	function define<T>(endpoint: string, headers?: () => Record<string, string>) {
+	function define<T>(endpoint: string, definitionInit?: RequestInit) {
 		const method =
 			<M extends Method>(method: M) =>
-			async (querystring: ParamMap = {}) => {
+			async (querystring: ParamMap = {}, methodInit: Omit<RequestInit, 'method'> = {}) => {
 				const url = urlcat(base, endpoint, querystring);
 
 				const request = await fetch(url, {
+					...definitionInit,
+					...methodInit,
 					method,
-					...(headers?.() ?? {}),
 				});
 
 				const json = (await request.json()) as APIResponse<InferAPIResponse<T, M>>;
