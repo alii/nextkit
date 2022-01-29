@@ -1,12 +1,21 @@
 {
 	"name": "@nextkit/example-basic",
 	"packageManager": "yarn@3.1.1",
+	"scripts": {
+		"build": "next build",
+		"dev": "next"
+	},
 	"dependencies": {
 		"@preconstruct/next": "^3.0.1",
-		"next": "^12.0.8",
+		"@twind/next": "^1.0.9",
+		"framer-motion": "^6.2.3",
+		"next": "^12.0.9",
+		"nextkit": "workspace:^",
+		"popmotion": "^11.0.3",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
-		"swr": "^1.1.2"
+		"swr": "^1.2.0",
+		"twind": "^0.16.16"
 	},
 	"devDependencies": {
 		"@types/react": "^17.0.38",

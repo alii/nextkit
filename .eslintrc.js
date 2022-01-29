@@ -18,6 +18,7 @@ module.exports = {
 		'arrow-body-style': 'off',
 		'@typescript-eslint/ban-types': 'off',
 		'@typescript-eslint/quotes': 'off',
+		'@typescript-eslint/triple-slash-reference': 'off',
 	},
 	ignorePatterns: ['dist'],
 };
