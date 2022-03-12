@@ -1,4 +1,4 @@
-import {NextkitException} from 'nextkit/src';
+import {NextkitException} from 'nextkit';
 import {api} from '../../server/nextkit';
 
 export default api({

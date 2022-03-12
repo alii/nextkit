@@ -36,7 +36,9 @@ export interface ConfigWithoutContext {
 export type Redirect = {_redirect: string};
 
 export type NextkitHandler<Context, Result> = (data: {
+	/** @deprecated Use .ctx instead */
 	context: Context;
+	ctx: Context;
 	req: NextApiRequest;
 	res: NextApiResponse<APIResponse<Result>>;
 }) => Promise<Result | Redirect>;
@@ -47,16 +49,16 @@ export interface ConfigWithContext<Context> extends ConfigWithoutContext {
 	getContext(req: NextApiRequest, res: NextApiResponse<APIResponse<any>>): Promise<Context>;
 }
 
-export class NextkitException extends Error {
+export class NextkitError extends Error {
 	constructor(public readonly code: number, message: string) {
 		super(message);
 	}
 }
 
-export class WrappedNonErrorException<T> extends Error {
+export class WrappedError<T> extends Error {
 	constructor(public readonly data: T) {
 		super(
-			'Some data was thrown, but it was not an instance of an Error, so a WrappedNonErrorException was thrown instead. Access the .data property to read the original data that was thrown'
+			'Some data was thrown, but it was not an instance of an Error, so a WrappedError was thrown instead. Access the .data property to read the original data that was thrown'
 		);
 	}
 }
@@ -112,7 +114,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 			try {
 				if (!handler) {
-					throw new NextkitException(405, `Cannot ${req.method ?? 'n/a'} this route`);
+					throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
 				}
 
 				// Context will be null if no getContext is provided. The type is null when the option is not provided
@@ -124,6 +126,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 				const result = await handler({
 					context,
+					ctx: context,
 					req,
 					res: res as NextApiResponse<APIResponse<unknown>>,
 				});
@@ -140,8 +143,8 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					message: null,
 				});
 			} catch (error: unknown) {
-				// Nextkit Exceptions are intended to be handled by nextkit and returned by the API without the onError func
-				if (error instanceof NextkitException) {
+				// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
+				if (error instanceof NextkitError) {
 					res.status(error.code).json({
 						status: error.code,
 						message: error.message,
@@ -152,7 +155,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					return;
 				}
 
-				const wrapped = error instanceof Error ? error : new WrappedNonErrorException(error);
+				const wrapped = error instanceof Error ? error : new WrappedError(error);
 
 				const result = await config.onError(req, res, wrapped);
 
