@@ -1,4 +1,4 @@
-import type {NextApiRequest, NextApiResponse} from 'next';
+import type {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export interface BaseAPIResponse {
 	status: number;
@@ -103,7 +103,7 @@ export function hasProp<Prop extends string | number | symbol>(
 }
 
 export default function createAPI<Context = null>(config: Config<Context>) {
-	return <
+	const createHandler = <
 		Init extends HandlerInit,
 		Handlers extends HandlersMap<Context, Init> = HandlersMap<Context, Init>
 	>(
@@ -168,6 +168,55 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 			}
 		};
 	};
+
+	createHandler.raw = (
+		handlers: Partial<Record<Method, NextkitHandler<Context, unknown>>>
+	): NextApiHandler => {
+		return async (req, res) => {
+			const handler = handlers[req.method as Method];
+			try {
+				if (!handler) {
+					throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
+				}
+
+				const context =
+					'getContext' in config ? await config.getContext(req, res) : (null as never);
+
+				res.json(
+					await handler({
+						context,
+						ctx: context,
+						req,
+						res: res as NextApiResponse<APIResponse<unknown>>,
+					})
+				);
+			} catch (error: unknown) {
+				if (error instanceof NextkitError) {
+					res.status(error.code).json({
+						status: error.code,
+						message: error.message,
+						data: null,
+						success: false,
+					});
+
+					return;
+				}
+
+				const wrapped = error instanceof Error ? error : new WrappedError(error);
+
+				const result = await config.onError(req, res, wrapped);
+
+				res.status(result.status).json({
+					success: false,
+					data: null,
+					message: result.message,
+					status: result.status,
+				});
+			}
+		};
+	};
+
+	return createHandler;
 }
 
 export {createAPI};
