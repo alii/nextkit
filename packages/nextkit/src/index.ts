@@ -87,6 +87,12 @@ export type InferAPIResponses<T> = T extends ExportedHandler<MapHandlerResults<a
 
 export type InferAPIResponse<T, M extends Method> = InferAPIResponses<T>[M];
 
+export type GetAPIContext<T> = T extends (
+	handlers: Record<Method, NextkitHandler<infer Context, unknown>>
+) => unknown
+	? Context
+	: never;
+
 export function hasProp<Prop extends string | number | symbol>(
 	value: unknown,
 	prop: Prop
