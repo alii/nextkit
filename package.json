@@ -15,13 +15,13 @@
 		"@babel/preset-env": "^7.16.11",
 		"@babel/preset-typescript": "^7.16.7",
 		"@preconstruct/cli": "^2.1.5",
-		"@typescript-eslint/eslint-plugin": "^5.14.0",
-		"@typescript-eslint/parser": "^5.14.0",
-		"eslint": "^8.11.0",
+		"@typescript-eslint/eslint-plugin": "^5.17.0",
+		"@typescript-eslint/parser": "^5.17.0",
+		"eslint": "^8.12.0",
 		"eslint-config-xo": "^0.40.0",
 		"eslint-config-xo-typescript": "^0.50.0",
-		"prettier": "^2.5.1",
-		"typescript": "^4.6.2"
+		"prettier": "^2.6.1",
+		"typescript": "^4.6.3"
 	},
 	"scripts": {
 		"lint": "eslint ./packages/**/*.ts",
