@@ -6,7 +6,7 @@
 		"url": "git+https://github.com/alii/nextkit.git"
 	},
 	"author": "Alistair Smith <alistairsmith01@gmail.com> (https://alistair.sh)",
-	"license": "MIT",
+	"license": "Apache-2.0",
 	"funding": {
 		"type": "github",
 		"url": "https://github.com/sponsors/alii"
