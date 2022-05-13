@@ -29,7 +29,7 @@
 		"build": "yarn preconstruct build",
 		"dev": "yarn preconstruct dev",
 		"release": "yarn preconstruct build && yarn workspace nextkit npm publish",
-		"build:example": "yarn preconstruct build && yarn workspace @nextkit/example-basic build"
+		"build:landing": "yarn preconstruct build && yarn workspace @nextkit/apps-landing build"
 	},
 	"bugs": {
 		"url": "https://github.com/alii/nextkit/issues"
