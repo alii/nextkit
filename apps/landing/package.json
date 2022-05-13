@@ -1,5 +1,5 @@
 {
-	"name": "@nextkit/example-basic",
+	"name": "@nextkit/apps-landing",
 	"packageManager": "yarn@3.1.1",
 	"scripts": {
 		"build": "next build",
@@ -8,17 +8,15 @@
 	"dependencies": {
 		"@preconstruct/next": "^4.0.0",
 		"@twind/next": "^1.0.9",
-		"framer-motion": "^6.3.3",
-		"next": "^12.1.5",
+		"next": "^12.1.6",
 		"nextkit": "workspace:^",
-		"popmotion": "^11.0.3",
 		"react": "^18.1.0",
 		"react-dom": "^18.1.0",
 		"swr": "^1.3.0",
 		"twind": "^0.16.17"
 	},
 	"devDependencies": {
-		"@types/react": "^18.0.8",
+		"@types/react": "^18.0.9",
 		"typescript": "^4.6.4"
 	}
 }

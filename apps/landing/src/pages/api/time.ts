@@ -1,4 +1,4 @@
-import {NextkitException} from 'nextkit';
+import {NextkitError} from 'nextkit';
 import {api} from '../../server/nextkit';
 
 export default api({
@@ -11,7 +11,7 @@ export default api({
 	},
 
 	async DELETE() {
-		throw new NextkitException(400, "silly, you can't delete time!");
+		throw new NextkitError(400, "silly, you can't delete time!");
 	},
 
 	async PUT({req}) {

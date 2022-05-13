@@ -47,7 +47,7 @@
 	"packageManager": "yarn@3.1.1",
 	"workspaces": [
 		"./packages/*",
-		"./examples/*"
+		"./apps/*"
 	],
 	"preconstruct": {
 		"packages": [
