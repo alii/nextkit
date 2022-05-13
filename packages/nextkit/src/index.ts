@@ -36,8 +36,6 @@ export interface ConfigWithoutContext {
 export type Redirect = {_redirect: string};
 
 export type NextkitHandler<Context, Result> = (data: {
-	/** @deprecated Use .ctx instead */
-	context: Context;
 	ctx: Context;
 	req: NextApiRequest;
 	res: NextApiResponse<APIResponse<Result>>;
@@ -127,15 +125,8 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 				// into context, so it's safe to default to null here. We should cast to `never` to make sure
 				// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
 				// it from the type
-				const context =
-					'getContext' in config ? await config.getContext(req, res) : (null as never);
-
-				const result = await handler({
-					context,
-					ctx: context,
-					req,
-					res: res as NextApiResponse<APIResponse<unknown>>,
-				});
+				const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
+				const result = await handler({ctx, req, res: res as NextApiResponse<APIResponse<unknown>>});
 
 				if (hasProp(result, '_redirect')) {
 					res.redirect(result._redirect);
@@ -185,17 +176,9 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
 				}
 
-				const context =
-					'getContext' in config ? await config.getContext(req, res) : (null as never);
+				const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
 
-				res.json(
-					await handler({
-						context,
-						ctx: context,
-						req,
-						res: res as NextApiResponse<APIResponse<unknown>>,
-					})
-				);
+				await handler({ctx, req, res: res as NextApiResponse<APIResponse<unknown>>});
 			} catch (error: unknown) {
 				if (error instanceof NextkitError) {
 					res.status(error.code).json({

@@ -1,7 +1,7 @@
 {
 	"name": "nextkit",
 	"packageManager": "yarn@3.1.1",
-	"version": "3.2.4",
+	"version": "3.3.0",
 	"main": "dist/nextkit.cjs.js",
 	"module": "dist/nextkit.esm.js",
 	"typings": "dist/nextkit.cjs.d.ts",
@@ -10,14 +10,5 @@
 	},
 	"peerDependencies": {
 		"next": "*"
-	},
-	"preconstruct": {
-		"entrypoints": [
-			"index.ts",
-			"client.ts"
-		]
-	},
-	"dependencies": {
-		"alistair": "^1.4.3"
 	}
 }
