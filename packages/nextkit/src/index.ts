@@ -1,4 +1,4 @@
-import type {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
+import type {NextApiRequest, NextApiResponse} from 'next';
 
 export interface BaseAPIResponse {
 	status: number;
@@ -20,6 +20,11 @@ export interface SuccessAPIResponse<T> extends BaseAPIResponse {
 
 export type APIResponse<T> = SuccessAPIResponse<T> | ErroredAPIResponse;
 
+export type NextkitRequest = NextApiRequest;
+export type NextkitResponse<T> = NextApiResponse<APIResponse<T>> & {
+	throw(status: number, message: string): never;
+};
+
 export type NextkitErrorHandler = (
 	req: NextApiRequest,
 	res: NextApiResponse<ErroredAPIResponse>,
@@ -37,14 +42,24 @@ export type Redirect = {_redirect: string};
 
 export type NextkitHandler<Context, Result> = (data: {
 	ctx: Context;
-	req: NextApiRequest;
-	res: NextApiResponse<APIResponse<Result>>;
+	req: NextkitRequest;
+	res: NextkitResponse<APIResponse<Result>>;
 }) => Promise<Result | Redirect>;
 
 export type HandlerInit = Partial<Record<Method, unknown>>;
 
+/**
+ * @internal
+ */
+export interface InternalOptions {
+	/**
+	 * Whether we should reply or not
+	 */
+	reply: boolean;
+}
+
 export interface ConfigWithContext<Context> extends ConfigWithoutContext {
-	getContext(req: NextApiRequest, res: NextApiResponse<APIResponse<any>>): Promise<Context>;
+	getContext(req: NextkitRequest, res: NextkitResponse<APIResponse<any>>): Promise<Context>;
 }
 
 export class NextkitError extends Error {
@@ -95,11 +110,11 @@ export function hasProp<Prop extends string | number | symbol>(
 	value: unknown,
 	prop: Prop
 ): value is Record<Prop, unknown> {
-	if (typeof value !== 'object') {
+	if (value === null || value === undefined) {
 		return false;
 	}
 
-	if (!value) {
+	if (typeof value !== 'object') {
 		return false;
 	}
 
@@ -107,13 +122,23 @@ export function hasProp<Prop extends string | number | symbol>(
 }
 
 export default function createAPI<Context = null>(config: Config<Context>) {
-	const createHandler = <
-		Init extends HandlerInit,
-		Handlers extends HandlersMap<Context, Init> = HandlersMap<Context, Init>
-	>(
-		handlers: Handlers
-	): ExportedHandler<MapHandlerResults<Context, Handlers>> => {
-		return async (req, res) => {
+	const create =
+		(options: InternalOptions) =>
+		<
+			Init extends HandlerInit,
+			Handlers extends HandlersMap<Context, Init> = HandlersMap<Context, Init>
+		>(
+			handlers: Handlers
+		): ExportedHandler<MapHandlerResults<Context, Handlers>> =>
+		async (_req, _res) => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+			const req = _req as NextkitRequest;
+			const res = _res as NextkitResponse<APIResponse<InferAPIResponse<Handlers, Method>>>;
+
+			res.throw = function (status, message) {
+				throw new NextkitError(status, message);
+			};
+
 			const handler = handlers[req.method as Method];
 
 			try {
@@ -126,19 +151,26 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 				// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
 				// it from the type
 				const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
-				const result = await handler({ctx, req, res: res as NextApiResponse<APIResponse<unknown>>});
+
+				const result = await handler({
+					ctx,
+					req,
+					res: res as NextkitResponse<APIResponse<unknown>>,
+				});
 
 				if (hasProp(result, '_redirect')) {
 					res.redirect(result._redirect);
 					return;
 				}
 
-				res.json({
-					success: true,
-					data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
-					status: 200,
-					message: null,
-				});
+				if (options.reply) {
+					res.json({
+						success: true,
+						data: result as SuccessAPIResponse<InferAPIResponse<Handlers, Method>>,
+						status: 200,
+						message: null,
+					});
+				}
 			} catch (error: unknown) {
 				// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
 				if (error instanceof NextkitError) {
@@ -164,48 +196,17 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 				});
 			}
 		};
-	};
 
-	createHandler.raw = (
-		handlers: Partial<Record<Method, NextkitHandler<Context, unknown>>>
-	): NextApiHandler => {
-		return async (req, res) => {
-			const handler = handlers[req.method as Method];
-			try {
-				if (!handler) {
-					throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
-				}
+	const api = create({
+		reply: true,
+	});
 
-				const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
+	// Bruh I'll type this better later on god
+	(api as unknown as {raw: typeof api}).raw = create({
+		reply: false,
+	});
 
-				await handler({ctx, req, res: res as NextApiResponse<APIResponse<unknown>>});
-			} catch (error: unknown) {
-				if (error instanceof NextkitError) {
-					res.status(error.code).json({
-						status: error.code,
-						message: error.message,
-						data: null,
-						success: false,
-					});
-
-					return;
-				}
-
-				const wrapped = error instanceof Error ? error : new WrappedError(error);
-
-				const result = await config.onError(req, res, wrapped);
-
-				res.status(result.status).json({
-					success: false,
-					data: null,
-					message: result.message,
-					status: result.status,
-				});
-			}
-		};
-	};
-
-	return createHandler;
+	return api as typeof api & {raw: typeof api};
 }
 
 export {createAPI};

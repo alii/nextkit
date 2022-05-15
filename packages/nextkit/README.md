@@ -1,14 +1,37 @@
-# nextkit - [demo app](https://github.com/alii/nextkit-demo)
+# nextkit
 
 nextkit is a toolkit for Next.js apps that lets you generate type-safe, error handled Next.js API routes that conform to a standard response type.
 
-### example
+### Basic Usage
 
-My recommended pattern can be found in the `example` folder. This file exports a _type_ that can be ambiently imported in the frontend to have a guaranteed type for the API (plus, you can wrap it with the type `APIResponse<T>` to have the actual json typed from the HTTP response).
+```ts
+// @filename src/server.ts
 
-- **demo app**: [`github.com/alii/nextkit-demo`](https://github.com/alii/nextkit-demo)
-- **demo with [vercel/swr](https://github.com/vercel/swr)**: [`github.com/prequist/next-boilerplate`](https://github.com/prequist/next-boilerplate)
+const api = createAPI({
+	async onError(req, res, error) {
+		return {
+			status: 500,
+			message: error.message,
+		};
+	},
 
-### docs
+	async getContext(req, res) {
+		return {
+			time: Date.now(),
+		};
+	},
+});
 
-honestly the examples folder is good enough and it demonstrates all the features. i have no motivation to write docs yet 🚀🚀
+// @filename src/pages/api/time.ts
+import {api} from '../../server';
+
+export default api({
+	async GET({ctx}) {
+		return `You requested at ${ctx.time}`;
+	},
+});
+```
+
+### Documentation
+
+I plan to write documentation in the future. For now, you can find examples covering most features on the [GitHub repository](https://github.com/alii/nextkit/tree/main/apps/landing/src/pages/api).

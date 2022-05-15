@@ -1,4 +1,3 @@
-import {NextkitError} from 'nextkit';
 import {api} from '../../server/nextkit';
 
 export default api({
@@ -10,8 +9,10 @@ export default api({
 		return 'ok, nice post buddy!' as const;
 	},
 
-	async DELETE() {
-		throw new NextkitError(400, "silly, you can't delete time!");
+	async DELETE({res}) {
+		// Previously this would have been `throw new NextkitError(400, message);`
+		// but I added the `res.throw` method in `3.4.0`
+		res.throw(400, "silly, you can't delete time!");
 	},
 
 	async PUT({req}) {

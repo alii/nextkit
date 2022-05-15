@@ -1,7 +1,7 @@
 {
 	"name": "nextkit",
 	"packageManager": "yarn@3.1.1",
-	"version": "3.3.2",
+	"version": "3.4.0",
 	"main": "dist/nextkit.cjs.js",
 	"module": "dist/nextkit.esm.js",
 	"typings": "dist/nextkit.cjs.d.ts",
