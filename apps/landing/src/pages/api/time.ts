@@ -1,8 +1,8 @@
 import {api} from '../../server/nextkit';
 
 export default api({
-	async GET() {
-		return Date.now();
+	async GET({ctx}) {
+		return ctx.time;
 	},
 
 	async POST() {

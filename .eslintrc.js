@@ -19,6 +19,7 @@ module.exports = {
 		'@typescript-eslint/ban-types': 'off',
 		'@typescript-eslint/quotes': 'off',
 		'@typescript-eslint/triple-slash-reference': 'off',
+		'jsx-quotes': ['error', 'prefer-double'],
 	},
 	ignorePatterns: ['dist'],
 };

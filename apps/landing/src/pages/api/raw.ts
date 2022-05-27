@@ -14,7 +14,7 @@ import {api} from '../../server/nextkit';
 // It's an escape hatch :D
 
 export default api.raw({
-	async GET({res}) {
-		res.end(Date.now().toString());
+	async GET({res, ctx}) {
+		res.end(ctx.time.toString());
 	},
 });

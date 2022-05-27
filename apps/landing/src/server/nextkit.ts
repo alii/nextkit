@@ -7,4 +7,10 @@ export const api = createAPI({
 			message: 'Something went wrong.',
 		};
 	},
+
+	async getContext() {
+		return {
+			time: Date.now(),
+		};
+	},
 });
