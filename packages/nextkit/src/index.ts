@@ -1,4 +1,4 @@
-import type {NextApiRequest, NextApiResponse} from 'next';
+import type {NextApiHandler, NextApiRequest, NextApiResponse} from 'next';
 
 export interface BaseAPIResponse {
 	status: number;
@@ -122,91 +122,94 @@ export function hasProp<Prop extends string | number | symbol>(
 }
 
 export default function createAPI<Context = null>(config: Config<Context>) {
-	const create =
-		(options: InternalOptions) =>
+	const getResult = async <H extends HandlersMap<Context, HandlerInit>>(
+		handlers: H,
+		_req: NextApiRequest,
+		_res: NextApiResponse
+	) => {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+		const req = _req as NextkitRequest;
+		const res = _res as NextkitResponse<unknown>;
+
+		res.throw = function (status, message) {
+			throw new NextkitError(status, message);
+		};
+
+		const handler = handlers[req.method as Method];
+
+		try {
+			if (!handler) {
+				throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
+			}
+
+			// Context will be null if no getContext is provided. The type is null when the option is not provided
+			// into context, so it's safe to default to null here. We should cast to `never` to make sure
+			// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
+			// it from the type
+			const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
+
+			const result = await handler({
+				ctx,
+				req,
+				res: res as NextkitResponse<APIResponse<unknown>>,
+			});
+
+			if (hasProp(result, '_redirect')) {
+				res.redirect((result as Redirect)._redirect);
+				return;
+			}
+
+			return result;
+		} catch (error: unknown) {
+			// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
+			if (error instanceof NextkitError) {
+				res.status(error.code).json({
+					status: error.code,
+					message: error.message,
+					data: null,
+					success: false,
+				});
+
+				return;
+			}
+
+			const wrapped = error instanceof Error ? error : new WrappedError(error);
+			const result = await config.onError(req, res, wrapped);
+
+			res.status(result.status).json({
+				success: false,
+				data: null,
+				message: result.message,
+				status: result.status,
+			});
+		}
+	};
+
+	const handler =
 		<
 			Init extends HandlerInit,
 			Handlers extends HandlersMap<Context, Init> = HandlersMap<Context, Init>
 		>(
 			handlers: Handlers
 		): ExportedHandler<MapHandlerResults<Context, Handlers>> =>
-		async (_req, _res) => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-			const req = _req as NextkitRequest;
-			const res = _res as NextkitResponse<APIResponse<InferAPIResponse<Handlers, Method>>>;
+		async (req, res) => {
+			const result = await getResult<Handlers>(handlers, req, res);
 
-			res.throw = function (status, message) {
-				throw new NextkitError(status, message);
-			};
-
-			const handler = handlers[req.method as Method];
-
-			try {
-				if (!handler) {
-					throw new NextkitError(405, `Cannot ${req.method ?? 'n/a'} this route`);
-				}
-
-				// Context will be null if no getContext is provided. The type is null when the option is not provided
-				// into context, so it's safe to default to null here. We should cast to `never` to make sure
-				// that TypeScript doesn't tell us it will be the same as Context at runtime, so never excludes
-				// it from the type
-				const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
-
-				const result = await handler({
-					ctx,
-					req,
-					res: res as NextkitResponse<APIResponse<unknown>>,
-				});
-
-				if (hasProp(result, '_redirect')) {
-					res.redirect(result._redirect);
-					return;
-				}
-
-				if (options.reply) {
-					res.json({
-						success: true,
-						data: result as SuccessAPIResponse<InferAPIResponse<Handlers, Method>>,
-						status: 200,
-						message: null,
-					});
-				}
-			} catch (error: unknown) {
-				// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
-				if (error instanceof NextkitError) {
-					res.status(error.code).json({
-						status: error.code,
-						message: error.message,
-						data: null,
-						success: false,
-					});
-
-					return;
-				}
-
-				const wrapped = error instanceof Error ? error : new WrappedError(error);
-
-				const result = await config.onError(req, res, wrapped);
-
-				res.status(result.status).json({
-					success: false,
-					data: null,
-					message: result.message,
-					status: result.status,
-				});
-			}
+			res.json({
+				success: true,
+				data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
+				status: 200,
+				message: null,
+			});
 		};
 
-	const api = create({
-		reply: true,
-	});
+	handler.raw = (handlers: HandlersMap<Context, HandlerInit>): NextApiHandler => {
+		return async (req, res) => {
+			await getResult(handlers, req, res);
+		};
+	};
 
-	// Bruh I'll type this better later on god
-	(api as unknown as {raw: typeof api}).raw = create({
-		reply: false,
-	});
-
-	return api as typeof api & {raw: typeof api};
+	return handler;
 }
 
 export {createAPI};

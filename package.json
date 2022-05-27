@@ -12,16 +12,16 @@
 		"url": "https://github.com/sponsors/alii"
 	},
 	"devDependencies": {
-		"@babel/preset-env": "^7.17.10",
-		"@babel/preset-typescript": "^7.16.7",
+		"@babel/preset-env": "^7.18.2",
+		"@babel/preset-typescript": "^7.17.12",
 		"@preconstruct/cli": "^2.1.5",
-		"@typescript-eslint/eslint-plugin": "^5.23.0",
-		"@typescript-eslint/parser": "^5.23.0",
-		"eslint": "^8.15.0",
-		"eslint-config-xo": "^0.40.0",
-		"eslint-config-xo-typescript": "^0.50.0",
+		"@typescript-eslint/eslint-plugin": "^5.26.0",
+		"@typescript-eslint/parser": "^5.26.0",
+		"eslint": "^8.16.0",
+		"eslint-config-xo": "^0.41.0",
+		"eslint-config-xo-typescript": "^0.51.1",
 		"prettier": "^2.6.2",
-		"typescript": "^4.6.4"
+		"typescript": "^4.7.2"
 	},
 	"scripts": {
 		"lint": "eslint ./packages/**/*.ts",
