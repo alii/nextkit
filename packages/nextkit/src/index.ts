@@ -21,7 +21,7 @@ export interface SuccessAPIResponse<T> extends BaseAPIResponse {
 export type APIResponse<T> = SuccessAPIResponse<T> | ErroredAPIResponse;
 
 export type NextkitRequest = NextApiRequest;
-export type NextkitResponse<T> = NextApiResponse<APIResponse<T>> & {
+export type NextkitResponse<T> = NextApiResponse<T> & {
 	throw(status: number, message: string): never;
 };
 
@@ -46,6 +46,12 @@ export type NextkitHandler<Context, Result> = (data: {
 	res: NextkitResponse<APIResponse<Result>>;
 }) => Promise<Result | Redirect>;
 
+export type NextkitRawHandler<Context> = (data: {
+	ctx: Context;
+	req: NextkitRequest;
+	res: NextkitResponse<unknown>;
+}) => Promise<unknown>;
+
 export type HandlerInit = Partial<Record<Method, unknown>>;
 
 /**
@@ -68,6 +74,12 @@ export class NextkitError extends Error {
 	}
 }
 
+/**
+ * This class exists because JavaScript, annoyingly, lets you throw anything.
+ *
+ * By constructing a WrappedError, we can be sure that all errors that could happen
+ * inside of nextkit are always an instance of Error (therefore instanceof checks will work).
+ */
 export class WrappedError<T> extends Error {
 	constructor(public readonly data: T) {
 		super(
@@ -122,7 +134,9 @@ export function hasProp<Prop extends string | number | symbol>(
 }
 
 export default function createAPI<Context = null>(config: Config<Context>) {
-	const getResult = async <H extends HandlersMap<Context, HandlerInit>>(
+	const getResult = async <
+		H extends Partial<Record<Method, NextkitHandler<Context, unknown> | NextkitRawHandler<Context>>>
+	>(
 		handlers: H,
 		_req: NextApiRequest,
 		_res: NextApiResponse
@@ -148,11 +162,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 			// it from the type
 			const ctx = 'getContext' in config ? await config.getContext(req, res) : (null as never);
 
-			const result = await handler({
-				ctx,
-				req,
-				res: res as NextkitResponse<APIResponse<unknown>>,
-			});
+			const result = await handler({ctx, req, res});
 
 			if (hasProp(result, '_redirect')) {
 				res.redirect((result as Redirect)._redirect);
@@ -193,7 +203,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 			handlers: Handlers
 		): ExportedHandler<MapHandlerResults<Context, Handlers>> =>
 		async (req, res) => {
-			const result = await getResult<Handlers>(handlers, req, res);
+			const result = await getResult(handlers, req, res);
 
 			res.json({
 				success: true,
@@ -203,7 +213,9 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 			});
 		};
 
-	handler.raw = (handlers: HandlersMap<Context, HandlerInit>): NextApiHandler => {
+	handler.raw = (handlers: {
+		[Method in keyof HandlerInit]: NextkitRawHandler<Context>;
+	}): NextApiHandler => {
 		return async (req, res) => {
 			await getResult(handlers, req, res);
 		};
