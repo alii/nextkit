@@ -54,16 +54,6 @@ export type NextkitRawHandler<Context> = (data: {
 
 export type HandlerInit = Partial<Record<Method, unknown>>;
 
-/**
- * @internal
- */
-export interface InternalOptions {
-	/**
-	 * Whether we should reply or not
-	 */
-	reply: boolean;
-}
-
 export interface ConfigWithContext<Context> extends ConfigWithoutContext {
 	getContext(req: NextkitRequest, res: NextkitResponse<APIResponse<any>>): Promise<Context>;
 }
@@ -133,6 +123,8 @@ export function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
+const ERRORED_SENITEL = {};
+
 export default function createAPI<Context = null>(config: Config<Context>) {
 	const getResult = async <
 		H extends Partial<Record<Method, NextkitHandler<Context, unknown> | NextkitRawHandler<Context>>>
@@ -164,8 +156,8 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 			const result = await handler({ctx, req, res});
 
-			if (hasProp(result, '_redirect')) {
-				res.redirect((result as Redirect)._redirect);
+			if (hasProp(result, '_redirect') && typeof result._redirect === 'string') {
+				res.redirect(result._redirect);
 				return;
 			}
 
@@ -180,18 +172,20 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					success: false,
 				});
 
-				return;
+				return ERRORED_SENITEL;
 			}
 
 			const wrapped = error instanceof Error ? error : new WrappedError(error);
-			const result = await config.onError(req, res, wrapped);
+			const {status, message} = await config.onError(req, res, wrapped);
 
-			res.status(result.status).json({
+			res.status(status).json({
 				success: false,
 				data: null,
-				message: result.message,
-				status: result.status,
+				message,
+				status,
 			});
+
+			return ERRORED_SENITEL;
 		}
 	};
 
@@ -204,6 +198,12 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 		): ExportedHandler<MapHandlerResults<Context, Handlers>> =>
 		async (req, res) => {
 			const result = await getResult(handlers, req, res);
+
+			// Hacky, but we have already sent a response,
+			// so don't do it again!
+			if (result === ERRORED_SENITEL) {
+				return;
+			}
 
 			res.json({
 				success: true,
