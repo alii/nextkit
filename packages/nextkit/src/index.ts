@@ -123,7 +123,7 @@ export function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
-const ERRORED_SENITEL = {};
+const NO_RESPONSE_SENTINEL = {};
 
 export default function createAPI<Context = null>(config: Config<Context>) {
 	const getResult = async <
@@ -158,7 +158,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 			if (hasProp(result, '_redirect') && typeof result._redirect === 'string') {
 				res.redirect(result._redirect);
-				return;
+				return NO_RESPONSE_SENTINEL;
 			}
 
 			return result;
@@ -172,7 +172,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 					success: false,
 				});
 
-				return ERRORED_SENITEL;
+				return NO_RESPONSE_SENTINEL;
 			}
 
 			const wrapped = error instanceof Error ? error : new WrappedError(error);
@@ -185,7 +185,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 				status,
 			});
 
-			return ERRORED_SENITEL;
+			return NO_RESPONSE_SENTINEL;
 		}
 	};
 
@@ -201,7 +201,15 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 			// Hacky, but we have already sent a response,
 			// so don't do it again!
-			if (result === ERRORED_SENITEL) {
+			if (result === NO_RESPONSE_SENTINEL) {
+				return;
+			}
+
+			if (res.headersSent) {
+				console.warn(
+					'[nextkit] Nextkit has possibly detected a bug — headers have been sent but a NO_RESPONSE_SENTINEL was not found as an internal result type. Exiting early to prevent a double-send.'
+				);
+
 				return;
 			}
 
