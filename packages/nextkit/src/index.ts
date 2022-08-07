@@ -236,7 +236,9 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 	handler.raw = (handlers: {
 		[Method in keyof HandlerInit]: NextkitRawHandler<Context>;
 	}): NextApiHandler => {
-		return (req, res) => getResult(handlers, req, res);
+		return async (req, res) => {
+			await getResult(handlers, req, res);
+		};
 	};
 
 	handler.bare = (handlers: {
