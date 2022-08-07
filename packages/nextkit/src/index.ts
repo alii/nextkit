@@ -125,6 +125,16 @@ export function hasProp<Prop extends string | number | symbol>(
 
 export const NO_RESPONSE_SENTINEL = Symbol('NEXTKIT_NO_RESPONSE_SENTINEL');
 
+function detectHeadersSent(res: NextApiResponse): boolean {
+	if (res.headersSent) {
+		console.warn(
+			'[nextkit] Nextkit has possibly detected a bug — headers have been sent but a NO_RESPONSE_SENTINEL was not found as an internal result type. Exiting early to prevent a double-send.'
+		);
+		return true;
+	}
+	return false;
+}
+
 export default function createAPI<Context = null>(config: Config<Context>) {
 	/**
 	 * @return {typeof NO_RESPONSE_SENTINEL} if request has been fully handled
@@ -192,12 +202,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 				// so don't do it again!
 				if (result === NO_RESPONSE_SENTINEL) {
 					return;
-				}
-				if (res.headersSent) {
-					console.warn(
-						'[nextkit] Nextkit has possibly detected a bug — headers have been sent but a NO_RESPONSE_SENTINEL was not found as an internal result type. Exiting early to prevent a double-send.'
-					);
-
+				} else if (detectHeadersSent(res)) {
 					return;
 				}
 				res.json({
