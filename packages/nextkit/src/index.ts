@@ -126,13 +126,18 @@ export function hasProp<Prop extends string | number | symbol>(
 export const NO_RESPONSE_SENTINEL = Symbol('NEXTKIT_NO_RESPONSE_SENTINEL');
 
 export default function createAPI<Context = null>(config: Config<Context>) {
+	/**
+	 * @return {typeof NO_RESPONSE_SENTINEL} if request has been fully handled
+	 * @return {unknown} the value to response with
+	 * @throws {WrappedError | Error | NextkitError} if something wrong
+	 */
 	const getResult = async <
 		H extends Partial<Record<Method, NextkitHandler<Context, unknown> | NextkitRawHandler<Context>>>
 	>(
 		handlers: H,
 		_req: NextApiRequest,
 		_res: NextApiResponse
-	) => {
+	): Promise<unknown | typeof NO_RESPONSE_SENTINEL> => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 		const req = _req as NextkitRequest;
 		const res = _res as NextkitResponse<unknown>;
@@ -163,29 +168,7 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 
 			return result;
 		} catch (error: unknown) {
-			// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
-			if (error instanceof NextkitError) {
-				res.status(error.code).json({
-					status: error.code,
-					message: error.message,
-					data: null,
-					success: false,
-				});
-
-				return NO_RESPONSE_SENTINEL;
-			}
-
-			const wrapped = error instanceof Error ? error : new WrappedError(error);
-			const {status, message} = await config.onError(req, res, wrapped);
-
-			res.status(status).json({
-				success: false,
-				data: null,
-				message,
-				status,
-			});
-
-			return NO_RESPONSE_SENTINEL;
+			throw error instanceof Error ? error : new WrappedError(error);
 		}
 	};
 
@@ -197,36 +180,58 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 			handlers: Handlers
 		): ExportedHandler<MapHandlerResults<Context, Handlers>> =>
 		async (req, res) => {
-			const result = await getResult(handlers, req, res);
+			/**
+			 * default response convention:
+			 * - response with {@name SuccessAPIResponse} when handler returns non-redirect value
+			 * - response with {@name ErroredAPIResponse} when handler throws
+			 */
+			try {
+				const result = await getResult(handlers, req, res);
 
-			// Hacky, but we have already sent a response,
-			// so don't do it again!
-			if (result === NO_RESPONSE_SENTINEL) {
-				return;
+				// Hacky, but we have already sent a response,
+				// so don't do it again!
+				if (result === NO_RESPONSE_SENTINEL) {
+					return;
+				}
+				if (res.headersSent) {
+					console.warn(
+						'[nextkit] Nextkit has possibly detected a bug — headers have been sent but a NO_RESPONSE_SENTINEL was not found as an internal result type. Exiting early to prevent a double-send.'
+					);
+
+					return;
+				}
+				res.json({
+					success: true,
+					data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
+					status: 200,
+					message: null,
+				});
+			} catch (error: unknown) {
+				if (error instanceof NextkitError) {
+					// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
+					res.status(error.code).json({
+						status: error.code,
+						message: error.message,
+						data: null,
+						success: false,
+					});
+				} else if (error instanceof Error) {
+					const {status, message} = await config.onError(req, res, error);
+
+					res.status(status).json({
+						success: false,
+						data: null,
+						message,
+						status,
+					});
+				}
 			}
-
-			if (res.headersSent) {
-				console.warn(
-					'[nextkit] Nextkit has possibly detected a bug — headers have been sent but a NO_RESPONSE_SENTINEL was not found as an internal result type. Exiting early to prevent a double-send.'
-				);
-
-				return;
-			}
-
-			res.json({
-				success: true,
-				data: result as MapHandlerResults<Context, Handlers>[keyof Handlers],
-				status: 200,
-				message: null,
-			});
 		};
 
 	handler.raw = (handlers: {
 		[Method in keyof HandlerInit]: NextkitRawHandler<Context>;
 	}): NextApiHandler => {
-		return async (req, res) => {
-			await getResult(handlers, req, res);
-		};
+		return (req, res) => getResult(handlers, req, res);
 	};
 
 	return handler;
