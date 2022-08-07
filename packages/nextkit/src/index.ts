@@ -275,6 +275,11 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 		};
 	};
 
+	/**
+	 * expose to enable custom response conventions
+	 */
+	handler.getResult = getResult;
+
 	return handler;
 }
 
