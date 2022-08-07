@@ -239,6 +239,40 @@ export default function createAPI<Context = null>(config: Config<Context>) {
 		return (req, res) => getResult(handlers, req, res);
 	};
 
+	handler.bare = (handlers: {
+		[Method in keyof HandlerInit]: NextkitRawHandler<Context>;
+	}): NextApiHandler => {
+		return async (req, res) => {
+			/**
+			 * "bare" response convention:
+			 * - response with what {@name handlers} returns (except redirection)
+			 * - response with a JSON string ("message") if {@name NextkitError} is thrown
+			 * - response with what {@name Config.onError} returns when error happens
+			 */
+
+			try {
+				const result = await getResult(handlers, req, res);
+
+				// Hacky, but we have already sent a response,
+				// so don't do it again!
+				if (result === NO_RESPONSE_SENTINEL) {
+					return;
+				} else if (detectHeadersSent(res)) {
+					return;
+				}
+				res.json(result);
+			} catch (error: unknown) {
+				if (error instanceof NextkitError) {
+					// `NextkitError`s are intended to be handled by nextkit and returned by the API without the onError func
+					res.status(error.code).json(error.message);
+				} else if (error instanceof Error) {
+					const {status, message} = await config.onError(req, res, error);
+					res.status(status).json(message);
+				}
+			}
+		};
+	};
+
 	return handler;
 }
 
