@@ -123,7 +123,7 @@ export function hasProp<Prop extends string | number | symbol>(
 	return prop in value;
 }
 
-const NO_RESPONSE_SENTINEL = {};
+export const NO_RESPONSE_SENTINEL = Symbol('NEXTKIT_NO_RESPONSE_SENTINEL');
 
 export default function createAPI<Context = null>(config: Config<Context>) {
 	const getResult = async <
